@@ -1,0 +1,93 @@
+using System;
+
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+
+struct Time
+{
+    public int Hours;
+    public int Minutes;
+    public int Seconds;
+
+   
+}
+
+namespace task2_iti
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+
+            #region take num of student and names from user print names
+            Console.WriteLine("Enter Number of students");
+            int n = int.Parse(Console.ReadLine());
+            Console.WriteLine("Enter Names of students");
+            string[] stdname = new string[n];
+            for (int i = 0; i < n; i++)
+            {
+                Console.Write("Name" + i + 1);
+                stdname[i] = Console.ReadLine();
+            }
+            Console.WriteLine("The Names of students are");
+            for (int i = 0; i < n; i++)
+            {
+                Console.Write("  name " + i + "  =  " + stdname[i]);
+            }
+            #endregion
+
+            #region names for every track
+            Console.Write("  Enter Numbers of tracks you have ");
+            int nt = int.Parse(Console.ReadLine());
+            string[] tracks = new string[nt];
+            int[] age = { 0 };
+            int ns = 0;
+
+            int[] sum = new int[nt];
+            double[] avg = new double[nt];
+            for (int i = 0; i < nt; i++)
+            {
+                Console.Write("Enter Students no in track number " + i + 1);
+                ns = int.Parse(Console.ReadLine());
+                age = new int[ns];
+                for (int j = 0; j < ns; j++)
+                {
+                    Console.Write("Age of Student " + j + 1 + "in track " + i + " = ");
+                    age[j] = int.Parse(Console.ReadLine());
+                    sum[i] += age[j];
+
+                }
+                avg[i] = sum[i] / ns;
+            }
+
+            for (int i = 0; i < nt; i++)
+            {
+                Console.Write("No of Students  in track  " + i + 1 + " = " + ns);
+                Console.WriteLine("sum " + i + 1 + "=" + sum[i]);
+                Console.WriteLine("avg " + i + 1 + "=" + avg[i]);
+            }
+            for (int i = 0; i < ns; i++)
+            {
+                Console.Write("Age of Student " + i + 1 + " = " + age[i]);
+
+            }
+            #endregion
+
+            #region q3
+
+            Time t1;
+            Console.WriteLine("Enter your time HOURSE : ");
+            t1.Hours =int.Parse( Console.ReadLine());
+            Console.WriteLine("Enter your time MINUTES :");
+            t1.Minutes = int.Parse(Console.ReadLine());
+            Console.WriteLine("Enter your time SECONDS :");
+            t1.Seconds = int.Parse(Console.ReadLine());
+            Console.WriteLine("Time :"+ t1.Hours+" : "+ t1.Minutes +" : " + t1.Seconds );
+
+            #endregion
+        }
+    }
+}
