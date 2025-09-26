@@ -1,0 +1,190 @@
+using EF2.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace EF2
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+            LoadSections();
+            btnEdit.Enabled = false;
+            btnRemove.Enabled = false;
+        }
+
+        private void LoadSections()
+        {
+            using (var ctx = new CorpContext())
+            {
+                var sections = ctx.Sections.ToList();
+                comboBox1.DataSource = sections;
+                comboBox1.DisplayMember = "Title";
+                comboBox1.ValueMember = "DeptId";
+            }
+        }
+
+        private void LoadWorkers()
+        {
+            using (var repo = new WorkerRepo(new CorpContext()))
+            {
+                var workers = repo.GetAll()
+                    .Include(w => w.Section)
+                    .Select(w => new
+                    {
+                        w.Id,
+                        w.FirstName,
+                        w.LastName,
+                        w.Location,
+                        w.Income,
+                        Section = w.Section != null ? w.Section.Title : ""
+                    })
+                    .ToList();
+
+                dataGridView1.DataSource = workers;
+                dataGridView1.Columns["Id"].Visible = false;
+                dataGridView1.ClearSelection();
+            }
+        }
+
+        // search
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            using (var repo = new WorkerRepo(new CorpContext()))
+            {
+                var keyword = txtSearch.Text;
+                var workers = repo.FindByName(keyword)
+                    .Select(w => new
+                    {
+                        w.Id,
+                        w.FirstName,
+                        w.LastName,
+                        w.Location,
+                        w.Income,
+                        Section = w.Section != null ? w.Section.Title : ""
+                    })
+                    .ToList();
+
+                dataGridView1.DataSource = workers;
+                dataGridView1.ClearSelection();
+                btnEdit.Enabled = false;
+                btnRemove.Enabled = false;
+            }
+        }
+
+        // create
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtFirst.Text) &&
+                string.IsNullOrWhiteSpace(txtLast.Text) &&
+                string.IsNullOrWhiteSpace(txtAddress.Text) &&
+                string.IsNullOrWhiteSpace(txtIncome.Text))
+            {
+                MessageBox.Show("Fill at least one field before adding.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var repo = new WorkerRepo(new CorpContext()))
+            {
+                var worker = new Worker
+                {
+                    FirstName = txtFirst.Text,
+                    LastName = txtLast.Text,
+                    Location = txtAddress.Text,
+                    Income = int.TryParse(txtIncome.Text, out var salary) ? salary : 0,
+                    SectionId = (int?)comboBox1.SelectedValue
+                };
+
+                repo.Insert(worker);
+                MessageBox.Show("Worker created successfully!");
+            }
+            LoadWorkers();
+        }
+
+        private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+        {
+            bool rowSelected = dataGridView1.CurrentRow != null;
+            btnEdit.Enabled = rowSelected;
+            btnRemove.Enabled = rowSelected;
+
+            if (!rowSelected) return;
+
+            var row = dataGridView1.CurrentRow;
+            txtFirst.Text = row.Cells["FirstName"].Value?.ToString();
+            txtLast.Text = row.Cells["LastName"].Value?.ToString();
+            txtAddress.Text = row.Cells["Location"].Value?.ToString();
+            txtIncome.Text = row.Cells["Income"].Value?.ToString();
+
+            var sectionName = row.Cells["Section"].Value?.ToString();
+            comboBox1.SelectedIndex = comboBox1.FindStringExact(sectionName);
+        }
+
+        // update
+        private void btnEdit_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null) return;
+            var id = (int)dataGridView1.CurrentRow.Cells["Id"].Value;
+
+            using (var repo = new WorkerRepo(new CorpContext()))
+            {
+                var worker = repo.GetAll().FirstOrDefault(w => w.Id == id);
+                if (worker != null)
+                {
+                    worker.FirstName = txtFirst.Text;
+                    worker.LastName = txtLast.Text;
+                    worker.Location = txtAddress.Text;
+                    worker.Income = int.TryParse(txtIncome.Text, out var salary) ? salary : 0;
+                    worker.SectionId = (int?)comboBox1.SelectedValue;
+
+                    repo.Update(worker);
+                    MessageBox.Show("Worker updated!");
+                    LoadWorkers();
+                }
+            }
+        }
+
+        // get all workers
+        private void btnGetAll_Click(object sender, EventArgs e)
+        {
+            LoadWorkers();
+        }
+
+        // delete
+        private void btnRemove_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null) return;
+            var id = (int)dataGridView1.CurrentRow.Cells["Id"].Value;
+
+            using (var repo = new WorkerRepo(new CorpContext()))
+            {
+                var worker = repo.GetAll().FirstOrDefault(w => w.Id == id);
+                if (worker != null)
+                {
+                    var confirm = MessageBox.Show(
+                        $"Delete {worker.FirstName} {worker.LastName}?",
+                        "Confirm",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (confirm == DialogResult.Yes)
+                    {
+                        repo.Delete(worker);
+                        MessageBox.Show("Worker removed!");
+                        LoadWorkers();
+                    }
+                }
+            }
+        }
+
+        private void dataGridView1_MouseDown(object sender, MouseEventArgs e)
+        {
+            var hit = dataGridView1.HitTest(e.X, e.Y);
+            if (hit.RowIndex < 0)
+            {
+                dataGridView1.ClearSelection();
+                btnEdit.Enabled = false;
+                btnRemove.Enabled = false;
+            }
+        }
+    }
+}
