@@ -1,0 +1,165 @@
+using EF1.Entities;
+
+namespace EF1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+            btnUpdate.Enabled = false;
+            btnDelete.Enabled = false;
+        }
+
+        // search
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            using (var repo = new WorkerRepo(new CompanyContext()))
+            {
+                var keyword = txtSearch.Text;
+                var workers = repo.FindByName(keyword);
+                dataGridView1.DataSource = workers.ToList();
+                dataGridView1.ClearSelection();
+                btnUpdate.Enabled = false;
+                btnDelete.Enabled = false;
+            }
+        }
+
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        // create
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtFirst.Text) &&
+                string.IsNullOrWhiteSpace(txtLast.Text) &&
+                string.IsNullOrWhiteSpace(txtAddress.Text) &&
+                string.IsNullOrWhiteSpace(txtSalary.Text))
+            {
+                MessageBox.Show("Please fill in at least one field.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var repo = new WorkerRepo(new CompanyContext()))
+            {
+                var worker = new Worker
+                {
+                    FirstName = txtFirst.Text,
+                    LastName = txtLast.Text,
+                    Location = txtAddress.Text,
+                    Income = int.TryParse(txtSalary.Text, out var salary) ? salary : 0
+                };
+
+                repo.Insert(worker);
+                MessageBox.Show("New worker has been added!");
+            }
+            LoadWorkers();
+        }
+
+        private void LoadWorkers()
+        {
+            using (var repo = new WorkerRepo(new CompanyContext()))
+            {
+                var workers = repo.GetAll()
+                    .Select(w => new
+                    {
+                        w.Id,
+                        w.FirstName,
+                        w.LastName,
+                        w.Location,
+                        w.Income
+                    })
+                    .ToList();
+
+                dataGridView1.DataSource = workers;
+                dataGridView1.Columns["Id"].Visible = false;
+                dataGridView1.ClearSelection();
+            }
+        }
+
+        private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+        {
+            bool rowSelected = dataGridView1.CurrentRow != null;
+            btnUpdate.Enabled = rowSelected;
+            btnDelete.Enabled = rowSelected;
+
+            if (!rowSelected) return;
+
+            var row = dataGridView1.CurrentRow;
+            txtFirst.Text = row.Cells["FirstName"].Value?.ToString();
+            txtLast.Text = row.Cells["LastName"].Value?.ToString();
+            txtAddress.Text = row.Cells["Location"].Value?.ToString();
+            txtSalary.Text = row.Cells["Income"].Value?.ToString();
+        }
+
+        // update
+        private void btnUpdate_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null) return;
+            var id = (int)dataGridView1.CurrentRow.Cells["Id"].Value;
+
+            using (var repo = new WorkerRepo(new CompanyContext()))
+            {
+                var worker = repo.GetAll().FirstOrDefault(w => w.Id == id);
+                if (worker != null)
+                {
+                    worker.FirstName = txtFirst.Text;
+                    worker.LastName = txtLast.Text;
+                    worker.Location = txtAddress.Text;
+                    worker.Income = int.TryParse(txtSalary.Text, out var salary) ? salary : 0;
+
+                    repo.Update(worker);
+                    MessageBox.Show("Worker updated successfully!");
+
+                    LoadWorkers();
+                }
+            }
+        }
+
+        // get all workers
+        private void btnGetAll_Click(object sender, EventArgs e)
+        {
+            LoadWorkers();
+        }
+
+        // delete
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null) return;
+            var id = (int)dataGridView1.CurrentRow.Cells["Id"].Value;
+
+            using (var repo = new WorkerRepo(new CompanyContext()))
+            {
+                var worker = repo.GetAll().FirstOrDefault(w => w.Id == id);
+                if (worker != null)
+                {
+                    var confirm = MessageBox.Show(
+                        $"Are you sure you want to delete {worker.FirstName} {worker.LastName}?",
+                        "Confirm Delete",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (confirm == DialogResult.Yes)
+                    {
+                        repo.Delete(worker);
+                        MessageBox.Show("Worker deleted!");
+                        LoadWorkers();
+                    }
+                }
+            }
+        }
+
+        private void dataGridView1_MouseDown(object sender, MouseEventArgs e)
+        {
+            var hit = dataGridView1.HitTest(e.X, e.Y);
+            if (hit.RowIndex < 0)
+            {
+                dataGridView1.ClearSelection();
+                btnUpdate.Enabled = false;
+                btnDelete.Enabled = false;
+            }
+        }
+    }
+}
